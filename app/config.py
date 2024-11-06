@@ -26,8 +26,8 @@ class Config:
         'text': {'txt'}
     }
     
-    # ImageMagick binary path (Linux)
-    IMAGEMAGICK_BINARY = "/usr/bin/convert"
+    # ImageMagick binary path (cross-platform)
+    IMAGEMAGICK_BINARY = "/usr/bin/convert" if os.name == 'posix' else r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"
     
     # API Authentication
     API_KEY = os.getenv('API_KEY')
