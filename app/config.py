@@ -27,7 +27,12 @@ class Config:
     }
     
     # ImageMagick binary path (cross-platform)
-    IMAGEMAGICK_BINARY = "/usr/bin/convert" if os.name == 'posix' else r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"
+    if os.name == 'posix':  # Linux/Unix
+        IMAGEMAGICK_BINARY = "/usr/bin/convert"
+    elif os.name == 'nt':   # Windows
+        IMAGEMAGICK_BINARY = r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"
+    else:
+        raise ValueError("Unsupported operating system")
     
     # API Authentication
     API_KEY = os.getenv('API_KEY')
