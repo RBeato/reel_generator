@@ -26,8 +26,8 @@ class Config:
         'text': {'txt'}
     }
     
-    # ImageMagick binary path
-    IMAGEMAGICK_BINARY = r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"
+    # ImageMagick binary path (Linux)
+    IMAGEMAGICK_BINARY = "/usr/bin/convert"
     
     # API Authentication
     API_KEY = os.getenv('API_KEY')
