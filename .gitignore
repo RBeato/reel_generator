@@ -1,4 +1,22 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
+
+# Project specific
+input/*
+!input/.gitkeep
+output/*
+!output/.gitkeep
+uploads/*
+!uploads/.gitkeep
+processed/*
+!processed/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Environment
 .env
