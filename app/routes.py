@@ -6,6 +6,9 @@ from .utils import allowed_file, require_api_key
 from pathlib import Path
 import time
 from .config import Config
+from werkzeug.serving import WSGIRequestHandler
+
+WSGIRequestHandler.protocol_version = "HTTP/1.1"  # Use HTTP/1.1 for better timeout handling
 
 api = Blueprint('api', __name__)
 
@@ -25,11 +28,6 @@ def process_video():
     Uses logo.png from input folder
     """
     try:
-        # Add debug logging
-        current_app.logger.info("Received video processing request")
-        current_app.logger.info(f"Headers: {dict(request.headers)}")
-        current_app.logger.info(f"Form data: {dict(request.form)}")
-
         # Validate API key
         api_key = request.headers.get('X-API-Key')
         if api_key != Config.API_KEY:
