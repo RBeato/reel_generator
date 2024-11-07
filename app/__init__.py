@@ -3,7 +3,6 @@ from .config import Config
 import logging
 from logging.handlers import RotatingFileHandler
 import os
-import app.moviepy_conf
 
 def create_app(config_class=Config):
     app = Flask(__name__)
