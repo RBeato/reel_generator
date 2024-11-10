@@ -7,6 +7,7 @@ from pathlib import Path
 import time
 from .config import Config
 from werkzeug.serving import WSGIRequestHandler
+from .audio_processor import AudioProcessor
 
 WSGIRequestHandler.protocol_version = "HTTP/1.1"  # Use HTTP/1.1 for better timeout handling
 
@@ -21,7 +22,8 @@ def process_video():
     """
     API endpoint for video processing
     Expects multipart/form-data with:
-    - audio: audio file
+    - affirmation: affirmation audio file
+    - music: music audio file
     - header_text: string
     - body_text: string
     - author_text: string
@@ -54,62 +56,61 @@ def process_video():
         if len(author_text) > 50:
             return jsonify({'error': 'Author text exceeds maximum length of 50 characters'}), 400
 
-        # Handle audio file
-        if 'audio' not in request.files:
-            return jsonify({'error': 'No audio file provided'}), 400
-
-        audio_file = request.files['audio']
-        if not audio_file.filename:
-            return jsonify({'error': 'No audio file selected'}), 400
-
-        # Validate audio file type
-        if not audio_file.filename.lower().endswith(('.mp3', '.wav')):
-            return jsonify({'error': 'Invalid audio file format. Only .mp3 and .wav files are allowed'}), 400
-
-        # Verify required files exist in input folder
-        required_files = {
-            'logo.png': 'Logo image',
-            'background.mp4': 'Background video',
-            'BebasNeue-Regular.ttf': 'Font file'
-        }
+        # Handle audio files
+        required_audio = ['affirmation', 'music']
+        audio_files = {}
         
-        for filename, description in required_files.items():
-            file_path = os.path.join(Config.INPUT_FOLDER, filename)
-            if not os.path.exists(file_path):
-                return jsonify({'error': f'{description} not found: {filename}'}), 400
+        for audio_key in required_audio:
+            if audio_key not in request.files:
+                return jsonify({'error': f'No {audio_key} file provided'}), 400
+                
+            audio_file = request.files[audio_key]
+            if not audio_file.filename:
+                return jsonify({'error': f'No {audio_key} file selected'}), 400
+                
+            if not audio_file.filename.lower().endswith(('.mp3', '.wav')):
+                return jsonify({'error': f'Invalid {audio_key} file format. Only .mp3 and .wav files are allowed'}), 400
+                
+            # Save audio file
+            filename = secure_filename(audio_file.filename)
+            filepath = os.path.join(Config.UPLOAD_FOLDER, filename)
+            audio_file.save(filepath)
+            audio_files[audio_key] = filename
 
-        # Validate directories exist and are writable
-        if not os.path.exists(Config.UPLOAD_FOLDER):
-            return jsonify({'error': 'Upload folder not found'}), 500
-        if not os.access(Config.UPLOAD_FOLDER, os.W_OK):
-            return jsonify({'error': 'Upload folder is not writable'}), 500
-
-        # Save audio file with error handling
+        # Process audio files
         try:
-            audio_filename = secure_filename(audio_file.filename)
-            audio_path = os.path.join(Config.UPLOAD_FOLDER, audio_filename)
-            audio_file.save(audio_path)
+            audio_processor = AudioProcessor(
+                input_folder=Config.UPLOAD_FOLDER,
+                output_folder=Config.UPLOAD_FOLDER
+            )
+            
+            combined_audio = audio_processor.process_audio(
+                affirmation_filename=audio_files['affirmation'],
+                music_filename=audio_files['music'],
+                output_filename='combined_audio.mp3'
+            )
         except Exception as e:
-            return jsonify({'error': f'Failed to save audio file: {str(e)}'}), 500
+            # Clean up uploaded files
+            for filepath in [os.path.join(Config.UPLOAD_FOLDER, f) for f in audio_files.values()]:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            return jsonify({'error': f'Audio processing failed: {str(e)}'}), 500
 
-        # Initialize video processor with error handling
+        # Initialize video processor
         try:
             processor = VideoProcessor(
                 input_folder=Config.INPUT_FOLDER,
                 output_folder=Config.PROCESSED_FOLDER
             )
-        except Exception as e:
-            return jsonify({'error': f'Failed to initialize video processor: {str(e)}'}), 500
-
-        # Generate unique output filename
-        timestamp = int(time.time())
-        output_filename = f"processed_{timestamp}_{secure_filename(os.path.splitext(audio_filename)[0])}.mp4"
-        
-        # Process video with error handling
-        try:
+            
+            # Generate output filename
+            timestamp = int(time.time())
+            output_filename = f"processed_{timestamp}_{secure_filename(os.path.splitext(audio_files['affirmation'])[0])}.mp4"
+            
+            # Process video using combined audio
             processor.process_video(
                 video_filename='background.mp4',
-                audio_filename=os.path.join(Config.UPLOAD_FOLDER, audio_filename),
+                audio_filename=os.path.join(Config.UPLOAD_FOLDER, combined_audio),
                 logo_filename='logo.png',
                 header_text=header_text,
                 body_text=body_text,
@@ -117,14 +118,16 @@ def process_video():
                 output_filename=output_filename
             )
         except Exception as e:
-            # Clean up uploaded audio file on error
-            if os.path.exists(audio_path):
-                os.remove(audio_path)
+            # Clean up all uploaded files
+            for filepath in [os.path.join(Config.UPLOAD_FOLDER, f) for f in [*audio_files.values(), combined_audio]]:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
             return jsonify({'error': f'Video processing failed: {str(e)}'}), 500
 
-        # Clean up uploaded audio file after successful processing
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+        # Clean up uploaded files after successful processing
+        for filepath in [os.path.join(Config.UPLOAD_FOLDER, f) for f in [*audio_files.values(), combined_audio]]:
+            if os.path.exists(filepath):
+                os.remove(filepath)
 
         return jsonify({
             'status': 'success',

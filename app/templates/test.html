@@ -2,12 +2,11 @@
 <html>
 <body>
 <form action="/api/process_video" method="post" enctype="multipart/form-data">
-    <input type="file" name="video" accept="video/*"><br>
-    <input type="file" name="audio" accept="audio/*"><br>
-    <input type="file" name="logo" accept="image/*"><br>
-    <input type="file" name="header_text" accept=".txt"><br>
-    <input type="file" name="body_text" accept=".txt"><br>
-    <input type="file" name="author_text" accept=".txt"><br>
+    <input type="file" name="affirmation" accept="audio/*"><br>
+    <input type="file" name="music" accept="audio/*"><br>
+    <input type="text" name="header_text"><br>
+    <input type="text" name="body_text"><br>
+    <input type="text" name="author_text"><br>
     <input type="hidden" name="X-API-Key" value="your-secret-api-key">
     <input type="submit" value="Process Video">
 </form>
