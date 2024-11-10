@@ -36,8 +36,8 @@ class AudioProcessor:
             affirmation = AudioFileClip(str(self.input_folder / affirmation_filename))
             music = AudioFileClip(str(self.input_folder / music_filename))
 
-            # Slow down affirmation
-            affirmation = affirmation.speedx(0.8)  # 20% slower
+            # Slow down affirmation using fl_time_symmetrize
+            affirmation = affirmation.fl_time_symmetrize(0.8)  # 20% slower
             affirmation_duration = affirmation.duration
 
             # Calculate total duration
