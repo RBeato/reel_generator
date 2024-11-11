@@ -108,11 +108,15 @@ class VideoProcessor:
         author_text: str = None,
         output_filename: Optional[str] = None
     ):
-        """Process the video with all required modifications."""
+    
         try:
-            # Load video and audio
+            # Handle paths
+            if os.path.isabs(audio_filename):
+                audio_path = Path(audio_filename)
+            else:
+                audio_path = self.input_folder / audio_filename
+                
             video_path = self.input_folder / video_filename
-            audio_path = self.input_folder / audio_filename
             logo_path = self.input_folder / logo_filename
 
             # Load audio and apply fade out
@@ -134,8 +138,8 @@ class VideoProcessor:
 
                 # Create clips with extended duration
                 logo = (self.create_circular_logo(str(logo_path), size=144)
-                       .set_position((40, 80))
-                       .set_duration(video_duration))
+                    .set_position((40, 80))
+                    .set_duration(video_duration))
 
                 header_name = (self.create_text_clip(
                     header_text,
@@ -143,7 +147,7 @@ class VideoProcessor:
                     color='white',
                     stroke_width=0
                 ).set_position((200, 90))
-                 .set_duration(video_duration))
+                .set_duration(video_duration))
 
                 subtitle = (self.create_text_clip(
                     "/@affirmMe",
@@ -151,7 +155,7 @@ class VideoProcessor:
                     color='#808080',
                     stroke_width=0
                 ).set_position((200, 162))
-                 .set_duration(video_duration))
+                .set_duration(video_duration))
 
                 body = (self.create_text_clip(
                     body_text,
@@ -160,7 +164,7 @@ class VideoProcessor:
                     color='white',
                     stroke_width=0
                 ).set_position(('center', 'center'))
-                 .set_duration(video_duration))
+                .set_duration(video_duration))
 
                 author = (self.create_text_clip(
                     f"- {author_text}",
@@ -168,7 +172,7 @@ class VideoProcessor:
                     color='#808080',
                     stroke_width=0
                 ).set_position((100, 1750))
-                 .set_duration(video_duration))
+                .set_duration(video_duration))
 
                 # Combine all clips
                 final_video = CompositeVideoClip(
