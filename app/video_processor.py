@@ -110,6 +110,8 @@ class VideoProcessor:
     ):
     
         try:
+
+            logger.info("Starting video processing...")
             # Handle paths
             if os.path.isabs(audio_filename):
                 audio_path = Path(audio_filename)
@@ -120,15 +122,18 @@ class VideoProcessor:
             logo_path = self.input_folder / logo_filename
 
             # Load audio and apply fade out
+            logger.info(f"Loading audio from: {audio_path}")
             audio = AudioFileClip(str(audio_path))
             audio = audio.audio_fadeout(3)  # 3 second fade out
+            logger.info("Audio loaded successfully")
             
             # Add a small buffer
             video_duration = audio.duration + 0.5
             fps = 30
-
+            logger.info(f"Loading video from: {video_path}")
             with VideoFileClip(str(video_path)) as video:
                 # Process video with extended duration
+                logger.info("Video loaded successfully")
                 if video.duration < video_duration:
                     processed_video = self.resize_and_crop_video(video, (1080, 1920))
                     processed_video = processed_video.loop(duration=video_duration)
@@ -137,6 +142,7 @@ class VideoProcessor:
                     processed_video = processed_video.subclip(0, video_duration)
 
                 # Create clips with extended duration
+                logger.info("Creating overlay elements...")
                 logo = (self.create_circular_logo(str(logo_path), size=144)
                     .set_position((40, 80))
                     .set_duration(video_duration))
