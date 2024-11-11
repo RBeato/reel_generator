@@ -192,14 +192,14 @@ class VideoProcessor:
                     str(output_path),
                     codec='libx264',
                     audio_codec='aac',
-                    audio_bitrate='320k',
-                    preset='slow',
-                    fps=fps,
-                    threads=4,
+                    audio_bitrate='192k',  # Reduced from 320k
+                    preset='ultrafast',    # Changed from 'slow'
+                    fps=30,
+                    threads=2,             # Reduced from 4
                     ffmpeg_params=[
                         '-pix_fmt', 'yuv420p',
                         '-movflags', '+faststart',
-                        '-crf', '23'
+                        '-crf', '28'       # Increased from 23 (lower quality but faster)
                     ]
                 )
                 logger.info(f"Video processing completed: {output_filename}")
