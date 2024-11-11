@@ -1,6 +1,5 @@
 import os
 import logging
-import time
 from typing import Tuple, Optional
 from pathlib import Path
 from textwrap import wrap
@@ -100,18 +99,27 @@ class VideoProcessor:
         return resized.crop(x1=x1, y1=0, width=target_size[0], height=target_size[1])
 
     def cleanup_old_files(self, max_age_hours: int = 24, min_files_to_keep: int = 10):
-        """Clean up old processed videos while keeping a minimum number of recent files."""
+        """Clean up old processed videos while keeping a minimum number of recent files.
+        
+        Args:
+            max_age_hours: Maximum age of files in hours before they're eligible for deletion
+            min_files_to_keep: Minimum number of most recent files to keep regardless of age
+        """
         try:
             logger.info(f"Starting cleanup of processed videos older than {max_age_hours} hours...")
             current_time = time.time()
             max_age_seconds = max_age_hours * 3600
             
+            # Get all mp4 files in the output directory with their creation times
             files = []
             for file in self.output_folder.glob('*.mp4'):
                 creation_time = file.stat().st_mtime
                 files.append((file, creation_time))
             
+            # Sort files by creation time (newest first)
             files.sort(key=lambda x: x[1], reverse=True)
+            
+            # Keep minimum number of recent files
             files_to_check = files[min_files_to_keep:]
             
             deleted_count = 0
@@ -142,65 +150,78 @@ class VideoProcessor:
         try:
             logger.info("Starting video processing...")
             
-            # Previous path handling code remains the same (lines 145-151)
+            # Handle paths
+            if os.path.isabs(audio_filename):
+                audio_path = Path(audio_filename)
+            else:
+                audio_path = self.input_folder / audio_filename
+                
+            video_path = self.input_folder / video_filename
+            logo_path = self.input_folder / logo_filename
+
+            # Load audio and apply fade out
+            logger.info(f"Loading audio from: {audio_path}")
+            audio = AudioFileClip(str(audio_path))
+            audio = audio.audio_fadeout(3)
+            logger.info("Audio loaded successfully")
             
             video_duration = audio.duration + 0.5
-            fps = 30  # Keep 30fps for smooth text
+            fps = 24  # Reduced from 30
 
             logger.info(f"Loading video from: {video_path}")
             with VideoFileClip(str(video_path)) as video:
                 logger.info("Video loaded successfully")
-                # Process video with 720p resolution (balanced)
+                # Process video with reduced resolution
                 if video.duration < video_duration:
-                    processed_video = self.resize_and_crop_video(video, (720, 1280))
+                    processed_video = self.resize_and_crop_video(video, (720, 1280))  # Half resolution
                     processed_video = processed_video.loop(duration=video_duration)
                 else:
-                    processed_video = self.resize_and_crop_video(video, (720, 1280))
+                    processed_video = self.resize_and_crop_video(video, (720, 1280))  # Half resolution
                     processed_video = processed_video.subclip(0, video_duration)
 
                 logger.info("Creating overlay elements...")
-                # Adjust sizes for 720p
+                # Scale down text and logo sizes for smaller resolution
                 logo = (self.create_circular_logo(str(logo_path), size=96)
-                    .set_position((30, 60))
-                    .set_duration(video_duration))
+                .set_position((30, 60))
+                .set_duration(video_duration))
 
                 header_name = (self.create_text_clip(
                     header_text,
                     54,  # Adjusted for 720p
                     color='white',
-                    stroke_width=2
-                ).set_position((150, 70))
+                    stroke_width=0
+                ).set_position((150, 67))
                 .set_duration(video_duration))
 
                 subtitle = (self.create_text_clip(
                     "/@affirmMe",
-                    32,  # Adjusted for 720p
+                    22,  # Reduced from 43
                     color='#808080',
-                    stroke_width=1
-                ).set_position((150, 122))
+                    stroke_width=0
+                ).set_position((150, 121))
                 .set_duration(video_duration))
 
                 body = (self.create_text_clip(
                     body_text,
-                    68,  # Adjusted for 720p
+                    68,  # Reduced from 90
                     width=20,
                     color='white',
-                    stroke_width=2
+                    stroke_width=0
                 ).set_position(('center', 'center'))
                 .set_duration(video_duration))
 
                 author = (self.create_text_clip(
                     f"- {author_text}",
-                    38,  # Adjusted for 720p
+                    25,  # Reduced from 50
                     color='#808080',
-                    stroke_width=1
-                ).set_position((75, 1170))
+                    stroke_width=0
+                ).set_position((75, 1160))
                 .set_duration(video_duration))
 
                 logger.info("Compositing final video...")
                 final_video = CompositeVideoClip(
                     [processed_video, logo, header_name, subtitle, body, author],
-                    size=(720, 1280)  # 720p resolution
+                    size=(720, 1280)  # Half resolution
                 ).set_duration(video_duration)
 
                 final_video = final_video.set_audio(audio)
@@ -212,18 +233,19 @@ class VideoProcessor:
                     str(output_path),
                     codec='libx264',
                     audio_codec='aac',
-                    audio_bitrate='192k',
-                    preset='faster',  # Balanced preset
+                    audio_bitrate='192k',  # Better audio quality
+                preset='medium',  # Better quality, reasonable speed
                     fps=fps,
-                    threads=2,
+                    threads=1,  # Single thread
                     ffmpeg_params=[
                         '-pix_fmt', 'yuv420p',
                         '-movflags', '+faststart',
-                        '-crf', '26',  # Balanced quality (23-28 is good range)
-                        '-tune', 'film'
+                        '-crf', '26',  # Better quality (23-28 is good range)
+                        '-tune', 'film'  # Better for general video content
                     ]
                 )
                 logger.info(f"Video processing completed: {output_filename}")
+                # Clean up old files after successful processing
                 self.cleanup_old_files()
 
         except Exception as e:
