@@ -106,7 +106,7 @@ class TestAudioProcessor:
 if __name__ == "__main__":
     base_dir = Path(__file__).parent
     input_dir = base_dir / 'input'
-    output_dir = base_dir / 'processed'
+    output_dir = base_dir / 'input'
     
     input_dir.mkdir(exist_ok=True)
     output_dir.mkdir(exist_ok=True)

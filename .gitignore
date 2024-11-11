@@ -5,6 +5,8 @@ __pycache__/
 *.so
 .Python
 venv/
+test_audio_processor.py
+test_video_processor.py
 
 # Project specific
 input/*

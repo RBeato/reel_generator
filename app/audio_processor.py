@@ -1,9 +1,10 @@
 import os
 import logging
 from pathlib import Path
-from typing import Optional
-from moviepy.editor import AudioFileClip
+from pydub import AudioSegment
 import numpy as np
+import librosa
+import soundfile as sf
 
 logger = logging.getLogger(__name__)
 
@@ -13,64 +14,102 @@ class AudioProcessor:
         self.output_folder = Path(output_folder)
         self.output_folder.mkdir(parents=True, exist_ok=True)
 
-    def _get_rms_level(self, audio: AudioFileClip) -> float:
-        """Calculate RMS level of audio clip"""
-        samples = audio.to_soundarray()
-        return np.sqrt(np.mean(samples**2))
+    def slow_down_with_pitch_preservation(self, audio_path: Path, speed_factor: float) -> AudioSegment:
+        # Load the audio file with higher sample rate
+        y, sr = librosa.load(str(audio_path), sr=44100, res_type='kaiser_best')
+        
+        # Time stretch while preserving pitch with higher quality settings
+        y_stretched = librosa.effects.time_stretch(y, rate=speed_factor)
+        
+        # Save to temporary file with high quality settings
+        temp_path = self.output_folder / 'temp_stretched.wav'
+        sf.write(
+            str(temp_path), 
+            y_stretched, 
+            sr, 
+            subtype='PCM_24',  # 24-bit audio for better quality
+            format='WAV'
+        )
+        
+        # Load back with PyDub with high quality settings
+        audio_segment = AudioSegment.from_wav(str(temp_path))
+        
+        # Clean up temp file
+        temp_path.unlink()
+        
+        return audio_segment
 
-    def _adjust_volume(self, audio: AudioFileClip, target_rms: float) -> AudioFileClip:
-        """Adjust audio volume to match target RMS"""
-        current_rms = self._get_rms_level(audio)
-        adjustment_factor = target_rms / current_rms if current_rms > 0 else 1
-        return audio.volumex(adjustment_factor)
-
-    def process_audio(
-        self,
-        affirmation_filename: str,
-        music_filename: str,
-        output_filename: str = 'audio.mp3'
-    ) -> str:
-        """Process and combine audio files"""
+    def process_audio(self, affirmation_filename: str, music_filename: str, output_filename: str = 'audio.mp3') -> str:
         try:
-            # Load audio files
-            affirmation = AudioFileClip(str(self.input_folder / affirmation_filename))
-            music = AudioFileClip(str(self.input_folder / music_filename))
+            # Load and slow down affirmation
+            affirmation_path = self.input_folder / affirmation_filename
+            affirmation = self.slow_down_with_pitch_preservation(affirmation_path, 1)  # 20% slower
+            
+            # Load music with high quality
+            music_path = self.input_folder / music_filename
+            y_music, sr_music = librosa.load(str(music_path), sr=44100, res_type='kaiser_best')
+            
+            # Save music to temporary WAV with high quality settings
+            temp_music_path = self.output_folder / 'temp_music.wav'
+            sf.write(
+                str(temp_music_path), 
+                y_music, 
+                sr_music, 
+                subtype='PCM_24',
+                format='WAV'
+            )
+            
+            # Load back music with PyDub
+            music = AudioSegment.from_wav(str(temp_music_path))
+            temp_music_path.unlink()
 
-            # Slow down affirmation
-            affirmation = affirmation.set_fps(affirmation.fps * 0.8)  # 20% slower
-            affirmation_duration = affirmation.duration
+            # Convert to stereo if mono
+            if affirmation.channels == 1:
+                affirmation = affirmation.set_channels(2)
+            if music.channels == 1:
+                music = music.set_channels(2)
 
-            # Calculate total duration
-            total_duration = affirmation_duration + 6  # 3 seconds padding on each side
+            # Ensure consistent high quality sample rates
+            affirmation = affirmation.set_frame_rate(44100)
+            music = music.set_frame_rate(44100)
 
-            # Crop and loop music if needed
-            if music.duration < total_duration:
-                music = music.loop(duration=total_duration)
-            else:
-                music = music.subclip(0, total_duration)
+            logger.info(f"Affirmation duration: {len(affirmation) / 1000} seconds")
+            logger.info(f"Music duration: {len(music) / 1000} seconds")
 
-            # Add fade effects to music
-            music = music.audio_fadein(2).audio_fadeout(2)
+            # Set duration for both clips
+            affirmation_duration = len(affirmation)
+            total_duration = affirmation_duration + 6000
 
-            # Balance volumes
-            target_rms = 0.1  # Target RMS level for affirmation
-            affirmation = self._adjust_volume(affirmation, target_rms)
-            music = self._adjust_volume(music, target_rms * 0.8)  # Music 20% quieter
+            # Process music
+            if len(music) < total_duration:
+                music = music * (total_duration // len(music) + 1)
+            music = music[:total_duration]
 
-            # Position affirmation with 3-second padding
-            affirmation = affirmation.set_start(3)
+            # Reduce music volume
+            music = music - 15  # Reduce music by 15dB
+            
+            # Add fade effects
+            music = music.fade_in(3000).fade_out(3000)
+            affirmation = affirmation.fade_in(100).fade_out(100)
 
             # Combine tracks
-            final_audio = CompositeAudioClip([music, affirmation])
+            silence = AudioSegment.silent(duration=3000)
+            final_audio = music.overlay(silence + affirmation)
 
-            # Export
+            # Export with maximum quality settings
             output_path = self.output_folder / output_filename
-            final_audio.write_audiofile(
+            final_audio.export(
                 str(output_path),
-                fps=44100,
-                bitrate='192k'
+                format="mp3",
+                bitrate="320k",
+                parameters=[
+                    "-q:a", "0",  # Highest quality
+                    "-ar", "44100",  # Sample rate
+                    "-b:a", "320k",  # Constant bitrate
+                    "-compression_level", "0"  # Less compression
+                ]
             )
-
+            
             return output_filename
 
         except Exception as e:
