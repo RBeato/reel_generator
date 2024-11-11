@@ -98,6 +98,45 @@ class VideoProcessor:
 
         return resized.crop(x1=x1, y1=0, width=target_size[0], height=target_size[1])
 
+    def cleanup_old_files(self, max_age_hours: int = 24, min_files_to_keep: int = 10):
+        """Clean up old processed videos while keeping a minimum number of recent files.
+        
+        Args:
+            max_age_hours: Maximum age of files in hours before they're eligible for deletion
+            min_files_to_keep: Minimum number of most recent files to keep regardless of age
+        """
+        try:
+            logger.info(f"Starting cleanup of processed videos older than {max_age_hours} hours...")
+            current_time = time.time()
+            max_age_seconds = max_age_hours * 3600
+            
+            # Get all mp4 files in the output directory with their creation times
+            files = []
+            for file in self.output_folder.glob('*.mp4'):
+                creation_time = file.stat().st_mtime
+                files.append((file, creation_time))
+            
+            # Sort files by creation time (newest first)
+            files.sort(key=lambda x: x[1], reverse=True)
+            
+            # Keep minimum number of recent files
+            files_to_check = files[min_files_to_keep:]
+            
+            deleted_count = 0
+            for file_path, creation_time in files_to_check:
+                if current_time - creation_time > max_age_seconds:
+                    try:
+                        file_path.unlink()
+                        deleted_count += 1
+                        logger.info(f"Deleted old file: {file_path.name}")
+                    except Exception as e:
+                        logger.error(f"Failed to delete file {file_path.name}: {str(e)}")
+            
+            logger.info(f"Cleanup completed. Deleted {deleted_count} files.")
+            
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")
+
     def process_video(
         self,
         video_filename: str = 'background.mp4',
@@ -206,6 +245,8 @@ class VideoProcessor:
                     ]
                 )
                 logger.info(f"Video processing completed: {output_filename}")
+                # Clean up old files after successful processing
+                self.cleanup_old_files()
 
         except Exception as e:
             logger.error(f"Error processing video: {str(e)}")
