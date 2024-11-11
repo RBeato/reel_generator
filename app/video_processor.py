@@ -108,10 +108,9 @@ class VideoProcessor:
         author_text: str = None,
         output_filename: Optional[str] = None
     ):
-    
         try:
-
             logger.info("Starting video processing...")
+            
             # Handle paths
             if os.path.isabs(audio_filename):
                 audio_path = Path(audio_filename)
@@ -124,48 +123,48 @@ class VideoProcessor:
             # Load audio and apply fade out
             logger.info(f"Loading audio from: {audio_path}")
             audio = AudioFileClip(str(audio_path))
-            audio = audio.audio_fadeout(3)  # 3 second fade out
+            audio = audio.audio_fadeout(3)
             logger.info("Audio loaded successfully")
             
-            # Add a small buffer
             video_duration = audio.duration + 0.5
-            fps = 30
+            fps = 24  # Reduced from 30
+
             logger.info(f"Loading video from: {video_path}")
             with VideoFileClip(str(video_path)) as video:
-                # Process video with extended duration
                 logger.info("Video loaded successfully")
+                # Process video with reduced resolution
                 if video.duration < video_duration:
-                    processed_video = self.resize_and_crop_video(video, (1080, 1920))
+                    processed_video = self.resize_and_crop_video(video, (540, 960))  # Half resolution
                     processed_video = processed_video.loop(duration=video_duration)
                 else:
-                    processed_video = self.resize_and_crop_video(video, (1080, 1920))
+                    processed_video = self.resize_and_crop_video(video, (540, 960))  # Half resolution
                     processed_video = processed_video.subclip(0, video_duration)
 
-                # Create clips with extended duration
                 logger.info("Creating overlay elements...")
-                logo = (self.create_circular_logo(str(logo_path), size=144)
-                    .set_position((40, 80))
+                # Scale down text and logo sizes for smaller resolution
+                logo = (self.create_circular_logo(str(logo_path), size=72)
+                    .set_position((20, 40))
                     .set_duration(video_duration))
 
                 header_name = (self.create_text_clip(
                     header_text,
-                    72,
+                    36,  # Reduced from 72
                     color='white',
                     stroke_width=0
-                ).set_position((200, 90))
+                ).set_position((100, 45))
                 .set_duration(video_duration))
 
                 subtitle = (self.create_text_clip(
                     "/@affirmMe",
-                    43,
+                    22,  # Reduced from 43
                     color='#808080',
                     stroke_width=0
-                ).set_position((200, 162))
+                ).set_position((100, 81))
                 .set_duration(video_duration))
 
                 body = (self.create_text_clip(
                     body_text,
-                    90,
+                    45,  # Reduced from 90
                     width=20,
                     color='white',
                     stroke_width=0
@@ -174,38 +173,36 @@ class VideoProcessor:
 
                 author = (self.create_text_clip(
                     f"- {author_text}",
-                    50,
+                    25,  # Reduced from 50
                     color='#808080',
                     stroke_width=0
-                ).set_position((100, 1750))
+                ).set_position((50, 875))
                 .set_duration(video_duration))
 
-                # Combine all clips
+                logger.info("Compositing final video...")
                 final_video = CompositeVideoClip(
                     [processed_video, logo, header_name, subtitle, body, author],
-                    size=(1080, 1920)
+                    size=(540, 960)  # Half resolution
                 ).set_duration(video_duration)
 
-                # Add the faded audio
                 final_video = final_video.set_audio(audio)
-                
-                # Add video fade out
                 final_video = final_video.fadeout(3)
 
-                # Write output
+                logger.info(f"Writing output to: {output_filename}")
                 output_path = self.output_folder / output_filename
                 final_video.write_videofile(
                     str(output_path),
                     codec='libx264',
                     audio_codec='aac',
-                    audio_bitrate='192k',  # Reduced from 320k
-                    preset='ultrafast',    # Changed from 'slow'
-                    fps=30,
-                    threads=2,             # Reduced from 4
+                    audio_bitrate='128k',  # Further reduced from 192k
+                    preset='ultrafast',
+                    fps=fps,
+                    threads=1,  # Single thread
                     ffmpeg_params=[
                         '-pix_fmt', 'yuv420p',
                         '-movflags', '+faststart',
-                        '-crf', '28'       # Increased from 23 (lower quality but faster)
+                        '-crf', '32',  # Increased from 28 (even lower quality)
+                        '-tune', 'fastdecode'
                     ]
                 )
                 logger.info(f"Video processing completed: {output_filename}")
