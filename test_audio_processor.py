@@ -3,6 +3,8 @@ import logging
 from pathlib import Path
 from pydub import AudioSegment
 import numpy as np
+import librosa
+import soundfile as sf
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,10 +16,38 @@ class TestAudioProcessor:
         self.output_folder = Path(output_folder)
         self.output_folder.mkdir(parents=True, exist_ok=True)
 
+    def slow_down_with_pitch_preservation(self, audio_path: Path, speed_factor: float) -> AudioSegment:
+        # Load the audio file with higher sample rate
+        y, sr = librosa.load(str(audio_path), sr=44100, res_type='kaiser_best')
+        
+        # Time stretch while preserving pitch with higher quality settings
+        y_stretched = librosa.effects.time_stretch(y, rate=speed_factor)
+        
+        # Save to temporary file with high quality settings
+        temp_path = self.output_folder / 'temp_stretched.wav'
+        sf.write(
+            str(temp_path), 
+            y_stretched, 
+            sr, 
+            subtype='PCM_24',  # 24-bit audio for better quality
+            format='WAV'
+        )
+        
+        # Load back with PyDub with high quality settings
+        audio_segment = AudioSegment.from_wav(str(temp_path))
+        
+        # Clean up temp file
+        temp_path.unlink()
+        
+        return audio_segment
+
     def process_audio(self, affirmation_filename: str, music_filename: str, output_filename: str = 'audio.mp3') -> str:
         try:
-            # Load audio files
-            affirmation = AudioSegment.from_mp3(str(self.input_folder / affirmation_filename))
+            # Load and slow down affirmation
+            affirmation_path = self.input_folder / affirmation_filename
+            affirmation = self.slow_down_with_pitch_preservation(affirmation_path,1 )
+            
+            # Load music normally
             music = AudioSegment.from_mp3(str(self.input_folder / music_filename))
 
             # Convert to stereo if mono
@@ -26,7 +56,7 @@ class TestAudioProcessor:
             if music.channels == 1:
                 music = music.set_channels(2)
 
-            # Ensure consistent sample rates
+            # Ensure consistent high quality sample rates
             affirmation = affirmation.set_frame_rate(44100)
             music = music.set_frame_rate(44100)
 
@@ -42,8 +72,8 @@ class TestAudioProcessor:
                 music = music * (total_duration // len(music) + 1)
             music = music[:total_duration]
 
-            # Instead of RMS adjustment, use simple volume reduction
-            music = music - 12  # Reduce music by 12dB
+            # Reduce music volume
+            music = music - 15  # Reduce music by 15dB instead of 12dB
             
             # Add fade effects
             music = music.fade_in(3000).fade_out(3000)
@@ -53,13 +83,18 @@ class TestAudioProcessor:
             silence = AudioSegment.silent(duration=3000)
             final_audio = music.overlay(silence + affirmation)
 
-            # Export with high quality settings
+            # Export with maximum quality settings
             output_path = self.output_folder / output_filename
             final_audio.export(
                 str(output_path),
                 format="mp3",
                 bitrate="320k",
-                parameters=["-q:a", "0"]
+                parameters=[
+                    "-q:a", "0",  # Highest quality
+                    "-ar", "44100",  # Sample rate
+                    "-b:a", "320k",  # Constant bitrate
+                    "-compression_level", "0"  # Less compression
+                ]
             )
             
             return output_filename
