@@ -16,6 +16,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Add file handler for video processor specific logs
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+video_handler = logging.FileHandler('logs/video_processor.log')
+video_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(levelname)s: %(message)s [%(filename)s:%(lineno)d]'
+))
+video_handler.setLevel(logging.INFO)
+logger.addHandler(video_handler)
+
 class VideoProcessor:
     def __init__(
         self,
