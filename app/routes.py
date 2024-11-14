@@ -30,12 +30,9 @@ def process_video():
     Uses logo.png from input folder
     """
     try:
-        current_app.logger.info("Starting video processing request")
-        
         # Validate API key
         api_key = request.headers.get('X-API-Key')
         if api_key != Config.API_KEY:
-            current_app.logger.warning("Invalid API key attempt")
             return jsonify({'error': 'Invalid API key'}), 401
 
         # Get and validate text content
@@ -43,29 +40,21 @@ def process_video():
         body_text = request.form.get('body_text', '').strip()
         author_text = request.form.get('author_text', '').strip()
 
-        # Log text content lengths
-        current_app.logger.info(f"Text lengths - Header: {len(header_text)}, Body: {len(body_text)}, Author: {len(author_text)}")
-
-        # Validate required fields
-        if not all([header_text, body_text, author_text]):
-            missing_fields = []
-            if not header_text: missing_fields.append('header_text')
-            if not body_text: missing_fields.append('body_text')
-            if not author_text: missing_fields.append('author_text')
-            current_app.logger.warning(f"Missing required fields: {', '.join(missing_fields)}")
-            return jsonify({'error': f"Missing required fields: {', '.join(missing_fields)}"}), 400
+        # Specific validation for each text field
+        if not header_text:
+            return jsonify({'error': 'Header text is required'}), 400
+        if not body_text:
+            return jsonify({'error': 'Body text is required'}), 400
+        if not author_text:
+            return jsonify({'error': 'Author text is required'}), 400
 
         # Validate text lengths
-        text_limits = {
-            'header_text': (header_text, 100),
-            'body_text': (body_text, 500),
-            'author_text': (author_text, 50)
-        }
-        
-        for field, (text, limit) in text_limits.items():
-            if len(text) > limit:
-                current_app.logger.warning(f"{field} exceeds maximum length of {limit} characters")
-                return jsonify({'error': f'{field} exceeds maximum length of {limit} characters'}), 400
+        if len(header_text) > 100:
+            return jsonify({'error': 'Header text exceeds maximum length of 100 characters'}), 400
+        if len(body_text) > 500:
+            return jsonify({'error': 'Body text exceeds maximum length of 500 characters'}), 400
+        if len(author_text) > 50:
+            return jsonify({'error': 'Author text exceeds maximum length of 50 characters'}), 400
 
         # Handle audio files
         required_audio = ['affirmation', 'music']
@@ -73,16 +62,13 @@ def process_video():
         
         for audio_key in required_audio:
             if audio_key not in request.files:
-                current_app.logger.warning(f"Missing {audio_key} file in request")
                 return jsonify({'error': f'No {audio_key} file provided'}), 400
                 
             audio_file = request.files[audio_key]
             if not audio_file.filename:
-                current_app.logger.warning(f"No filename for {audio_key}")
                 return jsonify({'error': f'No {audio_key} file selected'}), 400
                 
             if not audio_file.filename.lower().endswith(('.mp3', '.wav')):
-                current_app.logger.warning(f"Invalid file format for {audio_key}: {audio_file.filename}")
                 return jsonify({'error': f'Invalid {audio_key} file format. Only .mp3 and .wav files are allowed'}), 400
                 
             # Save audio file
@@ -90,11 +76,9 @@ def process_video():
             filepath = os.path.join(Config.UPLOAD_FOLDER, filename)
             audio_file.save(filepath)
             audio_files[audio_key] = filename
-            current_app.logger.info(f"Saved {audio_key} file: {filename}")
 
         # Process audio files
         try:
-            current_app.logger.info("Starting audio processing")
             audio_processor = AudioProcessor(
                 input_folder=Config.UPLOAD_FOLDER,
                 output_folder=Config.UPLOAD_FOLDER
@@ -105,16 +89,15 @@ def process_video():
                 music_filename=audio_files['music'],
                 output_filename='combined_audio.mp3'
             )
-            current_app.logger.info("Audio processing completed successfully")
-            
         except Exception as e:
-            current_app.logger.error(f"Audio processing failed: {str(e)}")
-            self._cleanup_files([os.path.join(Config.UPLOAD_FOLDER, f) for f in audio_files.values()])
+            # Clean up uploaded files
+            for filepath in [os.path.join(Config.UPLOAD_FOLDER, f) for f in audio_files.values()]:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
             return jsonify({'error': f'Audio processing failed: {str(e)}'}), 500
 
         # Initialize video processor
         try:
-            current_app.logger.info("Starting video processing")
             processor = VideoProcessor(
                 input_folder=Config.INPUT_FOLDER,
                 output_folder=Config.PROCESSED_FOLDER
@@ -134,17 +117,18 @@ def process_video():
                 author_text=author_text,
                 output_filename=output_filename
             )
-            current_app.logger.info("Video processing completed successfully")
-            
         except Exception as e:
-            current_app.logger.error(f"Video processing failed: {str(e)}")
-            self._cleanup_files([os.path.join(Config.UPLOAD_FOLDER, f) for f in [*audio_files.values(), combined_audio]])
+            # Clean up all uploaded files
+            for filepath in [os.path.join(Config.UPLOAD_FOLDER, f) for f in [*audio_files.values(), combined_audio]]:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
             return jsonify({'error': f'Video processing failed: {str(e)}'}), 500
 
         # Clean up uploaded files after successful processing
-        self._cleanup_files([os.path.join(Config.UPLOAD_FOLDER, f) for f in [*audio_files.values(), combined_audio]])
-        
-        current_app.logger.info(f"Request completed successfully. Output file: {output_filename}")
+        for filepath in [os.path.join(Config.UPLOAD_FOLDER, f) for f in [*audio_files.values(), combined_audio]]:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+
         return jsonify({
             'status': 'success',
             'output_file': output_filename,
@@ -152,7 +136,6 @@ def process_video():
         })
 
     except Exception as e:
-        current_app.logger.error(f"Unexpected error: {str(e)}")
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 @api.route('/download/<filename>')
@@ -169,6 +152,6 @@ def download_file(filename):
         if not os.path.exists(file_path):
             return jsonify({'error': 'File not found'}), 404
             
-        return send_from_directory(Config.PROCESSED_FOLDER, filename)
+        return send_from_directory(Config.PROCESSED_FOLDER, filename, as_attachment=True)
     except Exception as e:
         return jsonify({'error': f'Download failed: {str(e)}'}), 500
