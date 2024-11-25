@@ -205,7 +205,7 @@ class VideoProcessor:
                 .set_duration(video_duration))
 
                 subtitle = (self.create_text_clip(
-                    "/@affirmMe",
+                    "/@positivityhub_tk",
                     22,  # Reduced from 43
                     color='#808080',
                     stroke_width=0
