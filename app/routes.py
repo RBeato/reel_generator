@@ -8,6 +8,7 @@ import time
 from .config import Config
 from werkzeug.serving import WSGIRequestHandler
 from .audio_processor import AudioProcessor
+from urllib.parse import quote, unquote
 
 WSGIRequestHandler.protocol_version = "HTTP/1.1"  # Use HTTP/1.1 for better timeout handling
 
@@ -132,7 +133,7 @@ def process_video():
         return jsonify({
             'status': 'success',
             'output_file': output_filename,
-            'download_url': f'/download/{output_filename}'
+            'download_url': f'/download/{quote(output_filename)}'
         })
 
     except Exception as e:
@@ -141,15 +142,15 @@ def process_video():
 @api.route('/download/<filename>')
 def download_file(filename):
     try:
-        # Clean the filename
+        # Decode the URL-encoded filename
+        filename = unquote(filename)
         filename = secure_filename(filename)
         
-        # Check if the file exists
         file_path = os.path.join(Config.PROCESSED_FOLDER, filename)
         if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
             return jsonify({'error': 'File not found'}), 404
         
-        # Add MIME type and headers
         return send_from_directory(
             Config.PROCESSED_FOLDER, 
             filename, 
