@@ -262,3 +262,8 @@ class VideoProcessor:
         except Exception as e:
             logger.error(f"Error processing video: {str(e)}")
             raise
+
+    def generate_output_filename(self):
+        timestamp = int(time.time())
+        # Remove all special characters
+        return f"processed{timestamp}video.mp4"
