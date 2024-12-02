@@ -9,6 +9,9 @@ from .config import Config
 from werkzeug.serving import WSGIRequestHandler
 from .audio_processor import AudioProcessor
 from urllib.parse import quote, unquote
+import logging
+
+logger = logging.getLogger(__name__)
 
 WSGIRequestHandler.protocol_version = "HTTP/1.1"  # Use HTTP/1.1 for better timeout handling
 
@@ -148,19 +151,20 @@ def download_file(filename):
         
         file_path = os.path.join(Config.PROCESSED_FOLDER, filename)
         if not os.path.exists(file_path):
-            logger.error(f"File not found: {file_path}")
             return jsonify({'error': 'File not found'}), 404
         
-        return send_from_directory(
+        response = send_from_directory(
             Config.PROCESSED_FOLDER, 
             filename, 
             as_attachment=True,
-            mimetype='video/mp4',
-            headers={
-                'Content-Type': 'video/mp4',
-                'Content-Disposition': f'attachment; filename="{filename}"'
-            }
+            mimetype='video/mp4'
         )
+        
+        # Set headers separately
+        response.headers['Content-Type'] = 'video/mp4'
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
         return jsonify({'error': str(e)}), 500
