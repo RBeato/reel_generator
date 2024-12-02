@@ -109,7 +109,7 @@ class VideoProcessor:
 
         return resized.crop(x1=x1, y1=0, width=target_size[0], height=target_size[1])
 
-    def cleanup_old_files(self, max_age_hours: int = 24, min_files_to_keep: int = 10):
+    def cleanup_old_files(self, max_age_hours: int = 24, min_files_to_keep: int = 20):
         """Clean up old processed videos while keeping a minimum number of recent files.
         
         Args:

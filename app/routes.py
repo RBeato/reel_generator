@@ -140,18 +140,26 @@ def process_video():
 
 @api.route('/download/<filename>')
 def download_file(filename):
-    """Endpoint to download processed videos"""
     try:
-        if not os.path.exists(Config.PROCESSED_FOLDER):
-            return jsonify({'error': 'Processed folder not found'}), 500
-            
-        if not filename or '..' in filename:
-            return jsonify({'error': 'Invalid filename'}), 400
-            
+        # Clean the filename
+        filename = secure_filename(filename)
+        
+        # Check if the file exists
         file_path = os.path.join(Config.PROCESSED_FOLDER, filename)
         if not os.path.exists(file_path):
             return jsonify({'error': 'File not found'}), 404
-            
-        return send_from_directory(Config.PROCESSED_FOLDER, filename, as_attachment=True)
+        
+        # Add MIME type and headers
+        return send_from_directory(
+            Config.PROCESSED_FOLDER, 
+            filename, 
+            as_attachment=True,
+            mimetype='video/mp4',
+            headers={
+                'Content-Type': 'video/mp4',
+                'Content-Disposition': f'attachment; filename="{filename}"'
+            }
+        )
     except Exception as e:
-        return jsonify({'error': f'Download failed: {str(e)}'}), 500
+        logger.error(f"Download error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
