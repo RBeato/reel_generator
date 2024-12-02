@@ -107,9 +107,9 @@ def process_video():
                 output_folder=Config.PROCESSED_FOLDER
             )
             
-            # Generate output filename
+            # Generate output filename without underscores
             timestamp = int(time.time())
-            output_filename = f"processed_{timestamp}_{secure_filename(os.path.splitext(audio_files['affirmation'])[0])}.mp4"
+            output_filename = f"processed{timestamp}video.mp4"
             
             # Process video using combined audio
             processor.process_video(
