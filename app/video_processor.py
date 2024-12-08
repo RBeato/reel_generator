@@ -212,21 +212,30 @@ class VideoProcessor:
                 ).set_position((150, 121))
                 .set_duration(video_duration))
 
+                # Create body text first
                 body = (self.create_text_clip(
                     body_text,
-                    68,  # Reduced from 90
+                    68,
                     width=20,
                     color='white',
                     stroke_width=0
                 ).set_position(('center', 'center'))
                 .set_duration(video_duration))
 
+                # Calculate author position relative to body text
+                # Get body text height
+                body_height = body.size[1]
+                # Center point is at 640 (half of 1280)
+                # Add half of body height to get to bottom of body text
+                # Then add 50 pixels spacing
+                author_y = 640 + (body_height/2) + 50
+
                 author = (self.create_text_clip(
                     f"- {author_text}",
-                    25,  # Reduced from 50
+                    25,
                     color='#808080',
                     stroke_width=0
-                ).set_position((75, 1160))
+                ).set_position((75, author_y))
                 .set_duration(video_duration))
 
                 logger.info("Compositing final video...")
