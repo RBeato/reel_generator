@@ -1,3 +1,9 @@
+# Docker
+docker-compose.yaml
+
+# Environment
+.env
+
 # Python
 __pycache__/
 *.py[cod]
@@ -5,6 +11,7 @@ __pycache__/
 *.so
 .Python
 venv/
+ENV/
 test_audio_processor.py
 test_video_processor.py
 
@@ -22,3 +29,15 @@ logs/*
 
 # Environment
 .env
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+uploads/
+processed/
+
+# OS specific
+.DS_Store
+desktop.ini
