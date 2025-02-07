@@ -1,19 +1,5 @@
 version: '3'
 services:
-  n8n:
-    container_name: n8n
-    image: n8nio/n8n
-    ports:
-      - "5678:5678"
-    environment:
-      - N8N_HOST=0.0.0.0
-      - N8N_PORT=5678
-    volumes:
-      - n8n_data:/home/node/.n8n
-    restart: unless-stopped
-    networks:
-      - app-network
-
   python_editor:
     container_name: python_editor
     build: 
@@ -24,8 +10,6 @@ services:
     volumes:
       - ./app:/app
     restart: unless-stopped
-    networks:
-      - app-network
 
 volumes:
   n8n_data:

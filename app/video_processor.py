@@ -7,7 +7,7 @@ from textwrap import wrap
 from PIL import Image, ImageDraw
 import numpy as np
 from moviepy.editor import VideoFileClip, ImageClip, TextClip, CompositeVideoClip, AudioFileClip, CompositeAudioClip
-from .config import Config
+from config import Config
 
 # Configure logging
 logging.basicConfig(
