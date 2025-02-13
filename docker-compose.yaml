@@ -9,12 +9,16 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app
+      - ./input:/app/input
+      - ./processed:/app/processed
     env_file:
       - .env
     environment:
-      - FLASK_APP=app:create_app()
+      - FLASK_APP=__init__.py
       - FLASK_ENV=development
       - PYTHONPATH=/app
+    networks:
+      - n8n-network
     restart: unless-stopped
 
 volumes:
@@ -23,3 +27,5 @@ volumes:
 networks:
   app-network:
     driver: bridge
+  n8n-network:
+    external: true

@@ -50,6 +50,12 @@ class VideoProcessor:
         self.output_folder.mkdir(parents=True, exist_ok=True)
         logger.info(f"Using font: {self.font}")
 
+        # Add debug logging
+        logger.info(f"Input folder: {self.input_folder}")
+        logger.info(f"Font path: {self.input_folder / 'BebasNeue-Regular.ttf'}")
+        logger.info(f"Font exists: {(self.input_folder / 'BebasNeue-Regular.ttf').exists()}")
+        logger.info(f"Directory contents: {list(self.input_folder.glob('*'))}")
+
     def create_text_clip(
         self,
         text: str,

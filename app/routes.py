@@ -107,6 +107,12 @@ def process_video():
                 output_folder=Config.PROCESSED_FOLDER
             )
             
+            # Add debug logging before processing
+            logger.info(f"Processing video with:")
+            logger.info(f"Input folder: {processor.input_folder}")
+            logger.info(f"Font path: {processor.input_folder / 'BebasNeue-Regular.ttf'}")
+            logger.info(f"Directory contents: {list(processor.input_folder.glob('*'))}")
+            
             # Generate output filename without underscores
             timestamp = int(time.time())
             output_filename = f"processed{timestamp}video.mp4"

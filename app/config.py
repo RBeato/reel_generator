@@ -3,7 +3,12 @@ from pathlib import Path
 
 class Config:
     # Base directory for the application
-    BASE_DIR = Path(__file__).resolve().parent.parent
+    if os.getenv('FLASK_ENV') == 'development':
+        # In Docker, use absolute paths
+        BASE_DIR = Path('/app')
+    else:
+        # Outside Docker, use relative paths
+        BASE_DIR = Path(__file__).resolve().parent.parent
     
     # Temporary storage for uploaded files
     UPLOAD_FOLDER = BASE_DIR / 'uploads'
