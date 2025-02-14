@@ -10,6 +10,7 @@ from werkzeug.serving import WSGIRequestHandler
 from .audio_processor import AudioProcessor
 from urllib.parse import quote, unquote
 import logging
+from .image_processor import ImageProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -174,3 +175,68 @@ def download_file(filename):
     except Exception as e:
         logger.error(f"Download error: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@api.route('/process_image', methods=['POST'])
+def process_image():
+    """
+    API endpoint for image processing
+    Expects multipart/form-data with:
+    - image: background image file (9:16 ratio)
+    - text: string to overlay
+    Uses logo.png from input folder
+    """
+    try:
+        # Validate API key
+        api_key = request.headers.get('X-API-Key')
+        if api_key != Config.API_KEY:
+            return jsonify({'error': 'Invalid API key'}), 401
+
+        # Get and validate text
+        text = request.form.get('text', '').strip()
+        if not text:
+            return jsonify({'error': 'Text is required'}), 400
+
+        # Handle image file
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+            
+        image_file = request.files['image']
+        if not image_file.filename:
+            return jsonify({'error': 'No image file selected'}), 400
+            
+        if not image_file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            return jsonify({'error': 'Invalid image format. Only PNG and JPEG files are allowed'}), 400
+            
+        # Save image file
+        filename = secure_filename(image_file.filename)
+        filepath = os.path.join(Config.UPLOAD_FOLDER, filename)
+        image_file.save(filepath)
+
+        try:
+            processor = ImageProcessor(
+                input_folder=Config.INPUT_FOLDER,
+                output_folder=Config.PROCESSED_FOLDER
+            )
+            
+            output_filename = processor.process_image(
+                image_path=filepath,
+                text=text
+            )
+            
+        except Exception as e:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            return jsonify({'error': f'Image processing failed: {str(e)}'}), 500
+
+        # Clean up uploaded file
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+        return jsonify({
+            'status': 'success',
+            'output_file': output_filename,
+            'download_url': f'/download/{quote(output_filename)}'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500

@@ -159,7 +159,7 @@ class VideoProcessor:
         video_filename: str = 'background.mp4',
         audio_filename: str = 'sound.mp3',
         logo_filename: str = 'logo.png',
-        header_text: str = None,
+        header_text: str = 'POSITIVITYHUB',
         body_text: str = None,
         author_text: str = None,
         output_filename: Optional[str] = None
@@ -211,7 +211,7 @@ class VideoProcessor:
                 .set_duration(video_duration))
 
                 subtitle = (self.create_text_clip(
-                    "/@positivityhub_tk",
+                    "www.positivityhub.net",
                     22,  # Reduced from 43
                     color='#808080',
                     stroke_width=0
