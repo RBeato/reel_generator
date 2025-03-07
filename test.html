@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body>
+<form action="/api/process_video" method="post" enctype="multipart/form-data">
+    <label>Header Text:</label><br>
+    <input type="text" name="header_text"><br>
+    <label>Body Text:</label><br>
+    <textarea name="body_text"></textarea><br>
+    <label>Author Text:</label><br>
+    <input type="text" name="author_text"><br>
+    <label>Audio File:</label><br>
+    <input type="file" name="audio" accept="audio/*"><br>
+    <input type="hidden" name="X-API-Key" value="410850697a62310eae3996723aeff023d04d14a6d739ee3aad84c4048e1fa454">
+    <input type="submit" value="Process Video">
+</form>
+</body>
+</html>

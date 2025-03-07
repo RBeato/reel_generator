@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Processing Test</title>
+</head>
+<body>
+    <h2>Test Video Processing</h2>
+    <form id="videoForm">
+        <div>
+            <label>Affirmation Audio:</label>
+            <input type="file" name="affirmation" accept="audio/mp3,audio/wav" required><br>
+        </div>
+        <div>
+            <label>Background Music:</label>
+            <input type="file" name="music" accept="audio/mp3,audio/wav" required><br>
+        </div>
+        <div>
+            <label>Header Text:</label>
+            <input type="text" name="header_text" required maxlength="100"><br>
+        </div>
+        <div>
+            <label>Body Text:</label>
+            <textarea name="body_text" required maxlength="500"></textarea><br>
+        </div>
+        <div>
+            <label>Author Text:</label>
+            <input type="text" name="author_text" required maxlength="50"><br>
+        </div>
+        <input type="text" id="apiKey" placeholder="Enter API Key" required><br>
+        <button type="submit">Process Video</button>
+    </form>
+
+    <script>
+        document.getElementById('videoForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const apiKey = document.getElementById('apiKey').value;
+            
+            try {
+                const response = await fetch('/process_video', {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': apiKey
+                    },
+                    body: formData
+                });
+                const result = await response.json();
+                alert(JSON.stringify(result, null, 2));
+            } catch (error) {
+                alert('Error: ' + error);
+            }
+        };
+    </script>
+</body>
+</html> 
+<form action="/api/process_video" method="post" enctype="multipart/form-data">
+    <input type="file" name="affirmation" accept="audio/*"><br>
+    <input type="file" name="music" accept="audio/*"><br>
+    <input type="text" name="header_text"><br>
+    <input type="text" name="body_text"><br>
+    <input type="text" name="author_text"><br>
+    <input type="hidden" name="X-API-Key" value="your-secret-api-key">
+    <input type="submit" value="Process Video">
+</form>
+</body>
+</html> 
