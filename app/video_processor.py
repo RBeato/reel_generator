@@ -159,7 +159,7 @@ class VideoProcessor:
         video_filename: str = 'background.mp4',
         audio_filename: str = 'sound.mp3',
         logo_filename: str = 'logo.png',
-        header_text: str = 'POSITIVITYHUB',
+        header_text: str = 'MEDITNATION',
         body_text: str = None,
         author_text: str = None,
         output_filename: Optional[str] = None

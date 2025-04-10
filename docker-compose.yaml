@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   python_editor:
     container_name: python_editor
@@ -16,14 +18,18 @@ services:
       - PYTHONPATH=/app
       - API_KEY=${API_KEY}
     networks:
-      - my_custom_network
+      - n8n-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
-  n8n_data:
+  input:
+  processed:
 
 networks:
-  app-network:
-    driver: bridge
-  my_custom_network:
+  n8n-network:
     external: true

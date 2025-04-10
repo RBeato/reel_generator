@@ -89,7 +89,7 @@ class ImageProcessor:
             
             # Add header text
             header_font = ImageFont.truetype(self.font, 54)
-            draw.text((150, 67), "POSITIVITYHUB", font=header_font, fill='white')
+            draw.text((150, 67), "MEDITNATION", font=header_font, fill='white')
             
             # Add subtitle
             subtitle_font = ImageFont.truetype(self.font, 22)
