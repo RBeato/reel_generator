@@ -162,6 +162,7 @@ class VideoProcessor:
         header_text: str = 'MEDITNATION',
         body_text: str = None,
         author_text: str = None,
+        sub_header_text: str = None,
         output_filename: Optional[str] = None
     ):
         try:
@@ -211,7 +212,7 @@ class VideoProcessor:
                 .set_duration(video_duration))
 
                 subtitle = (self.create_text_clip(
-                    "www.positivityhub.net",
+                    sub_header_text or "www.positivityhub.net",
                     22,  # Reduced from 43
                     color='#808080',
                     stroke_width=0

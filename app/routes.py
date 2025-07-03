@@ -32,6 +32,7 @@ def process_video():
     - header_text: string
     - body_text: string
     - author_text: string
+    - sub_header_text: string (optional)
     Uses logo.png from input folder
     """
     try:
@@ -44,6 +45,7 @@ def process_video():
         header_text = request.form.get('header_text', '').strip()
         body_text = request.form.get('body_text', '').strip()
         author_text = request.form.get('author_text', '').strip()
+        sub_header_text = request.form.get('sub_header_text', '').strip()
 
         # Specific validation for each text field
         if not header_text:
@@ -60,6 +62,8 @@ def process_video():
             return jsonify({'error': 'Body text exceeds maximum length of 500 characters'}), 400
         if len(author_text) > 50:
             return jsonify({'error': 'Author text exceeds maximum length of 50 characters'}), 400
+        if len(sub_header_text) > 100:
+            return jsonify({'error': 'Sub-header text exceeds maximum length of 100 characters'}), 400
 
         # Handle audio files
         required_audio = ['affirmation', 'music']
@@ -126,6 +130,7 @@ def process_video():
                 header_text=header_text,
                 body_text=body_text,
                 author_text=author_text,
+                sub_header_text=sub_header_text,
                 output_filename=output_filename
             )
         except Exception as e:
